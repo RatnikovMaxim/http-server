@@ -17,6 +17,7 @@ import java.time.Instant;
 public class Server {
 
     public static final byte[] CRLFCRLF = {'\r', '\n', '\r', '\n'};
+    public static final byte[] CRLF = {'\r', '\n'};
     private int port = 9999;
     private int soTimeout = 30 * 1000;
     private int readTimeout = 60 * 1000;
@@ -47,8 +48,8 @@ public class Server {
         ) {
             System.out.println(socket.getInetAddress());
 
-            final String message = readMessage(in);
-            System.out.println("message = " + message);
+            final Request request = readRequest(in);
+            System.out.println("request = " + request);
 
             final String response = "HTTP/1.1 200 OK\r\n" +
                     "Connection: close\r\n" +
@@ -60,7 +61,7 @@ public class Server {
         }
     }
 
-    private String readMessage(InputStream in) throws IOException {
+    private Request readRequest(InputStream in) throws IOException {
         final byte[] buffer = new byte[bufferSize];
         int offset = 0;
         int length = buffer.length;
@@ -88,7 +89,21 @@ public class Server {
                 throw new BadRequestException("CRLFCRLF not found");
             }
         }
-        final String message = new String(buffer, 0, buffer.length - length, StandardCharsets.UTF_8).trim();
-        return message;
+        final Request request = new Request();
+        final int requestLineEndIndex = Bytes.indexOf(buffer, CRLF);
+        if (requestLineEndIndex == -1) {
+            throw new BadRequestException("Request Line not found");
+        }
+        final String requestLine = new String(buffer, 0, requestLineEndIndex, StandardCharsets.UTF_8);
+        System.out.println("requestLine = " + requestLine);
+        parseRequestLine(requestLine);
+        return request;
+    }
+
+    private void parseRequestLine(final String requestLine) {
+        final String[] parts = requestLine.split(" ");
+        System.out.println("method: " + parts[0]);
+        System.out.println("path: " + parts[1]);
+        System.out.println("version: " + parts[2]);
     }
 }
