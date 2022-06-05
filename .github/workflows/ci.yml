@@ -13,7 +13,9 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '17'
-      - run: mvn -B package # run - если пишем свою команду, а не готовый чей-то action
+      - run: mvn -B deploy
+      - env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # run - если пишем свою команду, а не готовый чей-то action
       - uses: actions/upload-artifact@v3
         with:
           name: app # имя архива, который будет опубликован на GitHub'е
