@@ -7,6 +7,9 @@ on:
 jobs:
   package: # я придумал сам
     runs-on: ubuntu-20.04
+    permissions:
+      contents: read
+      packages: write
     steps:
       - uses: actions/checkout@v3 # скопирует репозиторий на эту машинку
       - uses: actions/setup-java@v3
