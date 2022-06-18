@@ -2,6 +2,7 @@ package org.example.server;
 
 import com.google.common.primitives.Bytes;
 import lombok.Setter;
+import lombok.extern.slf4j.Slf4j;
 import org.example.server.exception.BadRequestException;
 import org.example.server.exception.DeadLineExceedException;
 
@@ -16,6 +17,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 @Setter
+@Slf4j
 public class Server {
 
     public static final byte[] CRLFCRLF = {'\r', '\n', '\r', '\n'};
@@ -51,14 +53,14 @@ public class Server {
         ) {
             socket.setSoTimeout(soTimeout);
 
-            System.out.println(socket.getInetAddress());
+            log.debug("client ip address: {}", socket.getInetAddress());
 
             final Request request = readRequest(in);
-            System.out.println("request = " + request);
+            log.debug("request: {}", request);
 
             Handler handler = routes.get(request.getPath());
-            // 1. Handler != null
-            // 1. Handler == null
+            // 1. Handler != null (значит такой ключ есть)
+            // 1. Handler == null (значит такого ключа нет)
 
             if (handler == null) {
                 final String response = "HTTP/1.1 404 Not Found\r\n" +
@@ -108,7 +110,6 @@ public class Server {
             throw new BadRequestException("Request Line not found");
         }
         final String requestLine = new String(buffer, 0, requestLineEndIndex, StandardCharsets.UTF_8);
-        System.out.println("requestLine = " + requestLine);
 
         final String[] parts = requestLine.split(" ");
         request.setMethod(parts[0]);
