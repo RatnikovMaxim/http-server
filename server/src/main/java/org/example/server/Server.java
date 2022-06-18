@@ -12,6 +12,8 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.HashMap;
+import java.util.Map;
 
 @Setter
 public class Server {
@@ -23,6 +25,7 @@ public class Server {
     private int readTimeout = 60 * 1000;
     private int bufferSize = 4096;
 
+    private final Map<String, Handler> routes = new HashMap<>();
     public void start() {
         try (ServerSocket serverSocket = new ServerSocket(port)
         ) {
@@ -39,25 +42,35 @@ public class Server {
         }
     }
 
-    private void handleClient(Socket socket) throws IOException {
-        socket.setSoTimeout(soTimeout);
+    private void handleClient(Socket socket) throws Exception {
+
         try (
                 socket;
                 final OutputStream out = socket.getOutputStream();
                 final InputStream in = socket.getInputStream()
         ) {
+            socket.setSoTimeout(soTimeout);
+
             System.out.println(socket.getInetAddress());
 
             final Request request = readRequest(in);
             System.out.println("request = " + request);
 
-            final String response = "HTTP/1.1 200 OK\r\n" +
-                    "Connection: close\r\n" +
-                    "Content-Length: 2\r\n" +
-                    "\r\n" +
-                    "OK";
+            Handler handler = routes.get(request.getPath());
+            // 1. Handler != null
+            // 1. Handler == null
 
-            out.write(response.getBytes(StandardCharsets.UTF_8));
+            if (handler == null) {
+                final String response = "HTTP/1.1 404 Not Found\r\n" +
+                        "Connection: close\r\n" +
+                        "Content-Length: 9\r\n" +
+                        "\r\n" +
+                        "Not Found";
+
+                out.write(response.getBytes(StandardCharsets.UTF_8));
+            }
+
+            handler.handle(request, out);
         }
     }
 
@@ -96,14 +109,14 @@ public class Server {
         }
         final String requestLine = new String(buffer, 0, requestLineEndIndex, StandardCharsets.UTF_8);
         System.out.println("requestLine = " + requestLine);
-        parseRequestLine(requestLine);
+
+        final String[] parts = requestLine.split(" ");
+        request.setMethod(parts[0]);
+        request.setPath(parts[1]);
+
         return request;
     }
-
-    private void parseRequestLine(final String requestLine) {
-        final String[] parts = requestLine.split(" ");
-        System.out.println("method: " + parts[0]);
-        System.out.println("path: " + parts[1]);
-        System.out.println("version: " + parts[2]);
+    public void register(String path, Handler handler) {
+        routes.put(path, handler);
     }
 }
